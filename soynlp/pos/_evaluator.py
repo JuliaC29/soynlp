@@ -25,7 +25,7 @@ class SimpleEojeolEvaluator(BaseEvaluator):
                 ('is_a_noun', 0.2)
             )
         self.weights = weights
-        
+
     def evaluate(self, candidate):
         num_nouns = len([True for lr in candidate if lr.l_tag == 'Noun'])
         num_words = len(candidate)
@@ -38,7 +38,7 @@ class SimpleEojeolEvaluator(BaseEvaluator):
         is_noun_josa = (num_words == 1 and
             (candidate[0].l_tag == 'Noun' and candidate[0].r_tag == 'Josa'))
         is_a_noun = num_words == 1 and candidate[0].l_tag == 'Noun' and not candidate[0].r
-        
+
         score = (num_nouns * self.weights[0][1]
                  + num_words * self.weights[1][1]
                  + has_noun * self.weights[2][1]
@@ -77,7 +77,7 @@ class LREvaluator(BaseEvaluator):
         scored_candidates = [(c, self.evaluate(c)) for c in candidates]
         best = self._remove_overlapped(scored_candidates)
         return sorted(best, key=lambda x:x[2])
-    
+
     def evaluate(self, candidate):
         is_noun_phrase = candidate.l_tag == 'Noun'
         lr_are_known = candidate.l_tag is not None and candidate.r_tag is not None
@@ -109,15 +109,15 @@ class LREvaluator(BaseEvaluator):
     def _remove_overlapped(self, scored_candidates):
         best = []
         sorted_ = sorted(scored_candidates, key=lambda x:-x[1])
-        
+
         while sorted_:
             best.append(sorted_.pop(0)[0])
             (b, e) = (best[-1].b, best[-1].e)
-            
+
             # Find overlapped 
             removals = [i for i, (c, _) in enumerate(sorted_) if b < c.e and e > c.b]
-            
+
             for idx in reversed(removals):
                 del sorted_[idx]
-                
+
         return sorted(best, key=lambda x:x[2])

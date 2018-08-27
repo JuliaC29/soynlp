@@ -29,17 +29,17 @@ class LREvaluator:
         scores = []
         for c in candidates:
             score = self._evaluate(
-                              self.make_scoretable(c.L[0],
-                              c.L[1],
-                              c.R[0],
-                              c.R[1],
-                              c.cohesion_l,
-                              c.droprate_l,
-                              c.lcount,
-                              c.lr_prop,
-                              c.lr_count,
-                              c.length
-                         ))
+                self.make_scoretable(c.L[0],
+                c.L[1],
+                c.R[0],
+                c.R[1],
+                c.cohesion_l,
+                c.droprate_l,
+                c.lcount,
+                c.lr_prop,
+                c.lr_count,
+                c.length)
+            )
             if preference:
                 if c.L[1] and c.L[1] in preference:
                     score += preference.get(c.L[1], {}).get(c.L[0], 0)
@@ -49,36 +49,35 @@ class LREvaluator:
         return sorted(scores, key=lambda x:-x[-1])
 
     def make_scoretable(self, l, pos_l, r, pos_r, cohesion, droprate, lcount, lr_prop, lr_count, len_LR):
-        return ScoreTable(cohesion,
-                          droprate,
-                          log(lcount+1),
-                          lr_prop,
-                          log(lr_count+1),
-                          1 if (pos_l and pos_r) else 0,
-                          1 if len(r) == 1 else 0,
-                          log(len_LR)
-                         )
+        return ScoreTable(
+            cohesion,
+            droprate,
+            log(lcount+1),
+            lr_prop,
+            log(lr_count+1),
+            1 if (pos_l and pos_r) else 0,
+            1 if len(r) == 1 else 0,
+            log(len_LR)
+        )
 
     def _evaluate(self, scoretable):
         return sum(score * self.profile.get(field, 0) for field, score in scoretable._asdict().items())
 
 
 class LRMaxScoreTagger:
-    def __init__(self, domain_dictionary_folders=None, use_base_dictionary=True,
-                 dictionary_word_mincount=3,
-                 evaluator=None, sents=None, lrgraph=None, 
-                 lrgraph_lmax=12, lrgraph_rmax=8,
-                 base_tokenizer=None, preference=None, verbose=False
-                ):
-        
+    def __init__(self, domain_dictionary_folders=None,
+        use_base_dictionary=True, dictionary_word_mincount=3,
+        evaluator=None, sents=None, lrgraph=None, lrgraph_lmax=12,
+        lrgraph_rmax=8, base_tokenizer=None, preference=None, verbose=False):
+
         self.dictionary = Dictionary(domain_dictionary_folders, use_base_dictionary, dictionary_word_mincount, verbose=verbose)
         self.evaluator = evaluator if evaluator else LREvaluator()
         self.preference = preference if preference else {}
         self.lrgraph = lrgraph if lrgraph else {}
-        
+
         if (not self.lrgraph) and (sents):
             self.lrgraph = _build_lrgraph(sents, lrgraph_lmax, lrgraph_rmax)
-            
+
         self.lrgraph_norm, self.lcount, self.cohesion_l, self.droprate_l\
             = self._initialize_scores(self.lrgraph)
 
@@ -88,7 +87,7 @@ class LRMaxScoreTagger:
                 self.base_tokenizer = MaxScoreTokenizer(scores=self.cohesion_l)
             except Exception as e:
                 print('MaxScoreTokenizer(cohesion) exception: {}'.format(e))
-        
+
     def _build_lrgraph(self, sents, lmax=12, rmax=8):
         from collections import Counter
         from collections import defaultdict
@@ -101,9 +100,9 @@ class LRMaxScoreTagger:
                 if len(r) > rmax:
                     continue
                 lrgraph[l][r] += count
-                
+
         return lrgraph
-    
+
     def _initialize_scores(self, lrgraph):
         def to_counter(dd):
             return {k:sum(d.values()) for k,d in dd.items()}
@@ -118,9 +117,9 @@ class LRMaxScoreTagger:
         lcount = to_counter(lrgraph)
         cohesion_l = {w:pow(c/lcount[w[0]], 1/(len(w)-1)) for w, c in lcount.items() if len(w) > 1}
         droprate_l = {w:c/lcount[w[:-1]] for w, c in lcount.items() if len(w) > 1 and w[:-1] in lcount}
-        
+
         return lrgraph_norm, lcount, cohesion_l, droprate_l
-    
+
     def pos(self, sent, flatten=True, debug=False):
         sent_ = [self._pos(eojeol, debug) for eojeol in sent.split() if eojeol]
         if flatten:
@@ -139,7 +138,7 @@ class LRMaxScoreTagger:
         if not debug:
             post = [w for lr in post for w in lr[:2] if w[0]]
         return post
-    
+
     def _initialize(self, t):
         candidates = self._initialize_L(t)
         candidates = self._initialize_LR(t, candidates)
@@ -155,12 +154,14 @@ class LRMaxScoreTagger:
                 if not l_pos:
                     continue
 
-                candidates.append([l,       # 0
-                                   l_pos,       # 1
-                                   b,      # 2                             
-                                   e,      # 3
-                                   e-b,   # 4
-                                  ])
+                candidates.append(
+                    [l,     # 0
+                     l_pos, # 1
+                     b,     # 2
+                     e,     # 3
+                     e-b,   # 4
+                    ]
+                )
 
         candidates = self._remove_l_subsets(candidates)
         return sorted(candidates, key=lambda x:x[2])
@@ -193,16 +194,17 @@ class LRMaxScoreTagger:
                 if (r) and ((lr_prop <= threshold_prop) or (lr_count <= threshold_count)):
                     continue
 
-                expanded.append([(l, pos),
-                                 (r, None if not r else self.dictionary.pos_R(r)),
-                                 b,
-                                 e,
-                                 e + len_r,
-                                 len_r,
-                                 len_l + len_r,
-                                 lr_prop,
-                                 lr_count
-                                ])
+                expanded.append([
+                    (l, pos),
+                    (r, None if not r else self.dictionary.pos_R(r)),
+                    b,
+                    e,
+                    e + len_r,
+                    len_r,
+                    len_l + len_r,
+                    lr_prop,
+                    lr_count]
+                )
 
         expanded = self._remove_r_subsets(expanded)
         return sorted(expanded, key=lambda x:x[2])
@@ -221,19 +223,20 @@ class LRMaxScoreTagger:
                     del sorted_[idx]
         expanded_ = [[L, R, p0, p2, len_LR, prop, count] for L, R, p0, p1, p2, len_R, len_LR, prop, count in expanded_]
         return expanded_
-    
+
     def _scoring(self, candidates):
         candidates = [self._to_table(c) for c in candidates]
         scores = self.evaluator.evaluate(candidates, self.preference if self.preference else None)
         return scores
 
     def _to_table(self, c):
-        return Table(c[0], c[1], c[2], c[3], c[4], c[5], c[6], 
-                     self.cohesion_l.get(c[0][0], 0),
-                     self.droprate_l.get(c[0][0], 0),
-                     self.lcount.get(c[0][0], 0)
-                    )
-    
+        return Table(
+            c[0], c[1], c[2], c[3], c[4], c[5], c[6],
+            self.cohesion_l.get(c[0][0], 0),
+            self.droprate_l.get(c[0][0], 0),
+            self.lcount.get(c[0][0], 0)
+        )
+
     def _find_best(self, scores):
         best = []
         sorted_ = sorted(scores, key=lambda x:-x[-1])
@@ -244,7 +247,7 @@ class LRMaxScoreTagger:
             for idx in reversed(removals):
                 del sorted_[idx]
         return sorted(best, key=lambda x:x[2])
-    
+
     def _postprocessing(self, t, words):
         n = len(t)
         adds = []
@@ -291,7 +294,7 @@ class LRMaxScoreTagger:
         #(pos, prop, count) = self._infer_subword_information(subword)
         #return [[(subword, pos), ('', None), 0, e, e, prop, count, 0.0]]
         return self._base_tokenizing_subword(subword, 0)
-    
+
     def _base_tokenizing_subword(self, t, b):
         subwords = []
         _subwords = self.base_tokenizer.tokenize(t, flatten=False)
@@ -301,26 +304,26 @@ class LRMaxScoreTagger:
             (pos, prop, count) = self._infer_subword_information(w[0])
             subwords.append([(w[0], pos), ('', None), b+w[1], b+w[2], w[2]-w[1], prop, count, 0.0])
         return subwords
-    
+
     def add_words_into_dictionary(self, words, tag):
         if not (tag in self.dictionary._pos):
             raise ValueError('{} does not exist base dictionary'.format(tag))
         self.dictionary.add_words(words, tag)
-        
+
     def remove_words_from_dictionary(self, words, tag):
         if not (tag in self.dictionary._pos):
             raise ValueError('{} does not exist base dictionary'.format(tag))
         self.dictionary.remove_words(words, tag)
-    
+
     def save_domain_dictionary(self, folder, head=None):
         self.dictionary.save_domain_dictionary(folder, head)
-    
+
     def set_word_preferance(self, words, tag, preference=10):
         if type(words) == str:
             words = {words}
         preference_table = self.preference.get(tag, {})
         preference_table.update({word:preference for word in words})
         self.preference[tag] = preference_table
-    
+
     def save_tagger(self, fname):
         raise NotImplemented
