@@ -83,11 +83,19 @@ class LRTemplateMatcher(BaseTemplateMatcher):
         self.rtags = {tag for tags in templates.values() for tag in tags}
         self.templates = templates
 
-    def generate(self, token):
+    def generate(self, sentence):
+        offset = 0
+        candidates = []
+        for eojeol in sentence.split():
+            candidates += self._generate(eojeol, offset)
+            offset += len(eojeol)
+        return candidates
+
+    def _generate(self, token, offset=0):
         if sys.version_info.major == 2:
             token = unicode(token)
-        candidates = self._initialize_L(token)
-        candidates = self._expand_R(token, candidates)
+        candidates = self._initialize_L(token, offset)
+        candidates = self._expand_R(token, candidates, offset)
         return candidates
 
     def _pos_L(self, word):
@@ -95,7 +103,7 @@ class LRTemplateMatcher(BaseTemplateMatcher):
         poses = {pos for pos in poses if pos in self.ltags}
         return poses
 
-    def _initialize_L(self, t):
+    def _initialize_L(self, t, offset=0):
         n = len(t)
         candidates = []
 
@@ -108,7 +116,7 @@ class LRTemplateMatcher(BaseTemplateMatcher):
                     continue
 
                 for l_tag in l_tags:
-                    candidates.append([l, l_tag, b, e])
+                    candidates.append([l, l_tag, offset + b, offset + e])
 
         candidates = self._remove_subset_l(candidates)
         return sorted(candidates, key=lambda x:x[2])
@@ -135,7 +143,7 @@ class LRTemplateMatcher(BaseTemplateMatcher):
 
         return candidates_
 
-    def _expand_R(self, t, candidates):
+    def _expand_R(self, t, candidates, offset=0):
         n = len(t)
         expanded = []
 
@@ -146,12 +154,12 @@ class LRTemplateMatcher(BaseTemplateMatcher):
                 r = t[e1:e2]
 
                 if not r:
-                    expanded.append(LR(l, l_tag, r, None, b, e1, e2))
+                    expanded.append(LR(l, l_tag, r, None, offset + b, offset + e1, offset + e2))
                 else:
                     for r_tag in self.templates.get(l_tag, []):
                         if not self.dictionary.word_is_tag(r, r_tag):
                             continue
-                        expanded.append(LR(l, l_tag, r, r_tag, b, e1, e2))
+                        expanded.append(LR(l, l_tag, r, r_tag, offset + b, offset + e1, offset + e2))
 
         expanded = self._remove_subset_r(expanded)
         return sorted(expanded, key=lambda x:x.b)
@@ -175,7 +183,7 @@ class LRTemplateMatcher(BaseTemplateMatcher):
 
                  # Find subset
                 removals = [i for i, c in enumerate(sorted_) 
-                            if ((c.l_tag == l_tag) 
+                            if ((c.l_tag == l_tag)
                                 and (b == c.b and m == c.m)
                                 and (m <= c.m and e >= c.e))
                            ]
