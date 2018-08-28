@@ -10,7 +10,7 @@ default_profile= OrderedDict([
 
 ScoreTable = namedtuple('ScoreTable', list(default_profile))
 
-class BigramEvaluator:
+class TrigramEvaluator:
 
     def __init__(self, profile):
         self.profile = profile if profile else default_profile
@@ -31,7 +31,7 @@ class BigramEvaluator:
     def _evaluate(self, scoretable):
         return sum(score * self.profile.get(field, 0) for field, score in scoretable._asdict().items())
 
-class BigramTemplateMatcher(BaseTemplateMatcher):
+class TrigramTemplateMatcher(BaseTemplateMatcher):
 
     def __init__(self, dictionary, templates=None):
         self.dictionary = dictionary
