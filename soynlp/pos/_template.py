@@ -6,7 +6,7 @@ from collections import namedtuple
 LR = namedtuple('LR', 'l l_tag r r_tag b m e')
 
 class BaseTemplateMatcher:
-    def generate(self, token):
+    def generate(self, sentence):
         raise NotImplementedError
 
 class EojeolTemplateMatcher(BaseTemplateMatcher):
@@ -19,7 +19,15 @@ class EojeolTemplateMatcher(BaseTemplateMatcher):
         self.single_tags = single_tags
         self.lr_templates = lr_templates
 
-    def generate(self, eojeol):
+    def generate(self, sentence):
+        offset = 0
+        candidates = []
+        for eojeol in sentence.split():
+            candidates += self._generate(eojeol, offset)
+            offset += len(eojeol)
+        return candidates
+
+    def _generate(self, eojeol, offset=0):
         n = len(eojeol)
         candidates = []
         for tag in self.dictionary.get_pos(eojeol):
@@ -32,13 +40,13 @@ class EojeolTemplateMatcher(BaseTemplateMatcher):
             l, r = eojeol[:b], eojeol[b:]
             for l_tag, r_tag in self.lr_templates:
                 if self.dictionary.word_is_tag(l, l_tag) and self.dictionary.word_is_tag(r, r_tag):
-                    candidates.append([LR(l, l_tag, r, r_tag, 0, b, n)])
+                    candidates.append([LR(l, l_tag, r, r_tag, offset + 0, offset + b, offset + n)])
 
-        compound_noun = self._decompose_compound(eojeol, 'Noun')
+        compound_noun = self._decompose_compound(eojeol, 'Noun', offset)
         if compound_noun:
             candidates.append(compound_noun)
 
-        compound_adverb = self._decompose_compound(eojeol, 'Adverb')
+        compound_adverb = self._decompose_compound(eojeol, 'Adverb', offset)
         if compound_adverb:
             candidates.append(compound_adverb)
 
@@ -55,7 +63,7 @@ class EojeolTemplateMatcher(BaseTemplateMatcher):
                     break
                 subword = eojeol[b:i]
                 if self.dictionary.word_is_tag(subword, tag):
-                    words.append(LR(subword, tag, '', None, b, i, i))
+                    words.append(LR(subword, tag, '', None, offset + b, offset + i, offset + i))
                     b = i
                     next_round = True
                     break
