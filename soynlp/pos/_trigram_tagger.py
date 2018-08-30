@@ -32,6 +32,14 @@ class TrigramEvaluator(BaseEvaluator):
     def _evaluate(self, scoretable):
         return sum(score * self.profile.get(field, 0) for field, score in scoretable._asdict().items())
 
+    def _dismatch(self, word, tag, b, e, ngram):
+        if (ngram[-1][3] <= b) or (e <= ngram[0][2]):
+            return False
+        for pos in ngram:
+            if (pos[0] == word) and (pos[1] == tag) and (pos[2] == b) and (pos[3] == e):
+                return False
+        return True
+
 class TrigramTemplateMatcher(BaseTemplateMatcher):
 
     def __init__(self, dictionary, templates=None):
