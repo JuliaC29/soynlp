@@ -2,6 +2,7 @@ from collections import OrderedDict
 from collections import namedtuple
 
 from ._dictionary import Dictionary
+from ._evaluator import BaseEvaluator
 from ._template import BaseTemplateMatcher
 
 default_profile= OrderedDict([
@@ -10,7 +11,7 @@ default_profile= OrderedDict([
 
 ScoreTable = namedtuple('ScoreTable', list(default_profile))
 
-class TrigramEvaluator:
+class TrigramEvaluator(BaseEvaluator):
 
     def __init__(self, profile):
         self.profile = profile if profile else default_profile
